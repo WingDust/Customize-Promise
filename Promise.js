@@ -3,10 +3,15 @@
  * 
  */
 
+/**
+ * 1. resolve,reject 的作用，意义
+ * 2. 在 prototype 中 函数的 this 指向 问题
+ */
+
 /** ES5 */
 // ES5 怎么写模块: 匿名函数自调用 英文： IIFE
 
-(function (window) {
+(function(window) {
     /**
      * Promise 的构造函数
      * excutor:执行器函数（同步执行）
@@ -78,13 +83,14 @@
      *  Promise 原型对象的 then() 
      *  指定成功和失败的回调函数
      *  返回一个新的 Promise 对象
+     *  返回的 Promise 对象的状态由 onResolved onRejected 决定
      * */
-    Promise.prototype.then = function (onResolved, onRejected) {
+    Promise.prototype.then = function(onResolved, onRejected) {
         // 假设当前状态还是 pending 状态，将回调函数保存起来
 
-        onResolved = typeof onResolved === 'function' ? onResolved  : value => value  // 向下传递成功的 value
+        onResolved = typeof onResolved === 'function' ? onResolved : value => value  // 向下传递成功的 value
         // 指定默认失败的回调(实现错误/异常传透的关键点)
-        onRejected = typeof onRejected === 'function' ? onRejected : reason => {throw reason} // throw 前不能有return
+        onRejected = typeof onRejected === 'function' ? onRejected : reason => { throw reason } // throw 前不能有return
         // 向后传递失败的 reason
 
         const self = this
@@ -93,28 +99,28 @@
         // 返回一个新的 Promise 对象
         return new Promise((resolve, reject) => {
 
-        /**调用指定回调函数，根据执行结果，改变 return 的 Promise 状态 */
-        function handler(callback) {
-            /**
-             * 1. 如果抛出异常，return 的 Promise 就会失败，reason 就是 error
-             * 2. 如果回调函数返回不是 Promise  return 的 Promise 就会成功，value 就是返回的值
-             * 3. 如果回调函数返回是 Promise ,return 的 Promise 结果就是这个 Promise 的结果
-             */
-            try {
-                const result = callback(self.data)
-                if (result instanceof Promise) {
-                    // result.then(
-                    //     value => resolve(value), // 当 result 成功时，让 return 的 Promise 也成功
-                    //     reason => reject(reason) // 当 result 失败时，让 return 的 Promise 也失败
-                    //     )
-                    resolve.then(resolve, reject)
-                } else {
-                    resolve(result)
+            /**调用指定回调函数，根据执行结果，改变 return 的 Promise 状态 */
+            function handler(callback) {
+                /**
+                 * 1. 如果抛出异常，return 的 Promise 就会失败，reason 就是 error
+                 * 2. 如果回调函数返回不是 Promise  return 的 Promise 就会成功，value 就是返回的值
+                 * 3. 如果回调函数返回是 Promise ,return 的 Promise 结果就是这个 Promise 的结果
+                 */
+                try {
+                    const result = callback(self.data)
+                    if (result instanceof Promise) {//3. 如果回调函数返回是 Promise ,return 的 Promise 结果就是这个 Promise 的结果
+                        // result.then(
+                        //     value => resolve(value), // 当 result 成功时，让 return 的 Promise 也成功
+                        //     reason => reject(reason) // 当 result 失败时，让 return 的 Promise 也失败
+                        //     )
+                        result.then(resolve, reject)
+                    } else {//2. 如果回调函数返回不是 Promise  return 的 Promise 就会成功，value 就是返回的值
+                        resolve(result)
+                    }
+                } catch (error) {
+                    reject(error)
                 }
-            } catch (error) {
-                reject(error)
             }
-        }
 
             if (self.status === PENDING) {
                 self.callbacks.push({
@@ -143,22 +149,22 @@
      * 指定失败的回调函数
      * 返回一个新的 Promise 对象
      * */
-    Promise.prototype.catch = function (onRejected) {
-        return this.then(undefined,onRejected)
+    Promise.prototype.catch = function(onRejected) {
+        return this.then(undefined, onRejected)
     }
 
     /**
      *  Promise 函数对象的 resolved()
      * 返回指定结果，的一个成功的 Promise 对象
      *  */
-    Promise.resolved = function (value) {
+    Promise.resolved = function(value) {
         // 返回一个成功/失败的 Promise
-        return new Promise ((resolve,reject) => {
+        return new Promise((resolve, reject) => {
             // value 是 Promise
             if (value instanceof Promise) { // 使用 value 的结果作为 Promise 的结果
-                value.then(resolve,reject)
-            // value 不是 Promise => Promise 变成成功 数据是 value
-            }else{
+                value.then(resolve, reject)
+                // value 不是 Promise => Promise 变成成功 数据是 value
+            } else {
                 resolve(value)
             }
         })
@@ -169,9 +175,9 @@
      * Promise 函数对象的 reject() 
      * 返回指定结果，的一个失败的 Promise 对象
      * */
-    Promise.rejected = function (reason) {
+    Promise.rejected = function(reason) {
         // 返回一个失败的 Promise
-        return new Promise((resolve,reject) => {
+        return new Promise((resolve, reject) => {
             reject(reason)
         })
 
@@ -181,14 +187,14 @@
      *  Promise 函数对象的 all()
      *  返回一个 Promise 只有当所有 Promise 都成功时才成功，否则失败
      * */
-    Promise.all = function (promises) {
+    Promise.all = function(promises) {
 
-        const values = new  Array(promises.length) // 
+        const values = new Array(promises.length) // 
 
-        let resolveCount = 0 
+        let resolveCount = 0
 
-        return new Promise((resolve,reject) =>{
-            promises.forEach((p,index)=>{
+        return new Promise((resolve, reject) => {
+            promises.forEach((p, index) => {
                 Promise.resolve(p).then(
                     value => {
                         resolveCount++
@@ -212,9 +218,9 @@
      * Promise 函数对象的 race()
      * 返回一个 Promise 其结果由第一个完成的 Promise 决定
      * */
-    Promise.race = function (promises) {
-        return new Promise ((resolve,reject) =>{
-            promises.forEach((p,index)=>{
+    Promise.race = function(promises) {
+        return new Promise((resolve, reject) => {
+            promises.forEach((p, index) => {
                 Promise.resolve(p).then(
                     value => {
                         resolve(value)
@@ -228,6 +234,44 @@
 
     }
 
+
+
+    /**
+     * 1. 返回一个 Promise 对象 ，在指定的时间后产生结果
+     * @param {*} value 
+     * @param {*} time 
+     */
+    Promise.resolveDelay = function(value, time) {
+
+        // 返回一个成功/失败的 Promise
+        return new Promise((resolve, reject) => {
+
+            setTimeout(() => {
+            if (value instanceof Promise) { // 使用 value 的结果作为 Promise 的结果
+                value.then(resolve, reject)
+                // value 不是 Promise => Promise 变成成功 数据是 value
+            } else {
+                resolve(value)
+            }
+
+            }, time);
+            // value 是 Promise
+        })
+    }
+
+    /**
+     * 1. 返回一个 Promise 对象 ，在指定的时间后失败
+     * @param {*} reason 
+     * @param {*} time 
+     */
+    Promise.rejectDelay = function(reason, time) {
+
+        return new Promise((resolve, reject) => {
+            setTimeout(() => {
+            reject(reason)
+            }, time);
+        })
+    }
 
     // 向外暴露 Promise 函数
     window.Promise = Promise

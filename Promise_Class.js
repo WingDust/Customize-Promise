@@ -102,7 +102,7 @@ class Promise {
                         //     value => resolve(value), // 当 result 成功时，让 return 的 Promise 也成功
                         //     reason => reject(reason) // 当 result 失败时，让 return 的 Promise 也失败
                         //     )
-                        resolve.then(resolve, reject)
+                        result.then(resolve, reject)
                     } else {
                         resolve(result)
                     }
